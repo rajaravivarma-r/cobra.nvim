@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 import pynvim
 
@@ -25,7 +26,7 @@ class CobraPlugin(object):
     # :Pwf rel
     # copies 'main.py' to the clipboard
     @pynvim.command("Pwf", nargs="*")
-    def testcommand(self, args):
+    def copy_current_filepath(self, args):
         import pyperclip
 
         copy_relative_path = False
@@ -37,3 +38,29 @@ class CobraPlugin(object):
             current_path = Path(self.nvim.command_output("pwd"))
             buffer_path = buffer_path.relative_to(current_path)
         pyperclip.copy(str(buffer_path))
+
+    @pynvim.command("CaseToCamelCase", nargs="*")
+    def convert_to_camel_case(self, args):
+        current_word = self._current_word()
+        words = current_word.split('_')
+        first_word = words.pop(0)
+        capitalized_words = [first_word] + [w.capitalize() for w in words]
+        self._replace_current_word(''.join(capitalized_words))
+
+    # TODO: Handle snake_case words
+    # Right now it handles PascalCase words, quickly put together for an
+    # usecase.
+    @pynvim.command("CaseToConstant", nargs="*")
+    def convert_to_constant(self, args):
+        current_word = self._current_word()
+        words = re.findall(r'[A-Z][a-z]+', current_word)
+        constant_word = [w.upper() for w in words]
+        self._replace_current_word('_'.join(constant_word))
+
+    def _current_word(self):
+        self.nvim.command('normal! "wyiw')
+        return self.nvim.funcs.getreg('w')
+
+    def _replace_current_word(self, new_word):
+        self.nvim.funcs.setreg('w', new_word)
+        return self.nvim.command('normal! viw"wp')
