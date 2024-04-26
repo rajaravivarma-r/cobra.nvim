@@ -29,7 +29,7 @@ class CobraPlugin:
     #
     # :Pwf rel
     # copies 'main.py' to the clipboard
-    @pynvim.command("Pwf", nargs="*")
+    @pynvim.command("Pwf", nargs="*", complete="customlist,PwfArguments")
     def copy_current_filepath(self, args):
         import pyperclip
 
@@ -67,3 +67,7 @@ class CobraPlugin:
         words = re.findall(r"[A-Z][a-z]+", current_word)
         constant_word = [w.upper() for w in words]
         self.nvim_helper.replace_current_word("_".join(constant_word))
+
+    @pynvim.function("PwfArguments", sync=True)
+    def pwf_arguments(self, *args):
+        return ["relative", "absolute"]
