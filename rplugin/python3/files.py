@@ -23,9 +23,23 @@ class FilesPlugin:
         match = re.search(
             file_path_line_no_col_no_regex, file_path_with_line_and_column
         )
+        line_no = None
+        col_no = None
+
         file_path = match.group("file_path")
-        line_no = int(match.group("line_no"))
-        col_no = int(match.group("col_no"))
+
+        if not file_path:
+            logging.warn(
+                f"Cannnot detect file_path in {file_path_with_line_and_column}"
+            )
+            return
+
+        if line_no_match := match.group("line_no"):
+            line_no = int(line_no_match)
+
+        if col_no_match := match.group("col_no"):
+            col_no = int(col_no_match)
+
         self.nvim.command(f"e {file_path}")
         if line_no:
             self.nvim.command(str(line_no))
