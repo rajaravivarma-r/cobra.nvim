@@ -3,6 +3,16 @@ import re
 
 import pynvim
 
+import git
+import tmux
+import utils
+
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG, filename="/Users/rajaravivarma/vim.log", filemode="w"
+)
+
 
 @pynvim.plugin
 class CobraPlugin(object):
@@ -30,7 +40,7 @@ class CobraPlugin(object):
         import pyperclip
 
         copy_relative_path = False
-        buffer_path = Path(self.nvim.current.buffer.name)
+        buffer_path = Path(self._current_buffer())
         if any("rel" in a for a in args):
             copy_relative_path = True
 
@@ -42,10 +52,10 @@ class CobraPlugin(object):
     @pynvim.command("CaseToCamelCase", nargs="*")
     def convert_to_camel_case(self, args):
         current_word = self._current_word()
-        words = current_word.split('_')
+        words = current_word.split("_")
         first_word = words.pop(0)
         capitalized_words = [first_word] + [w.capitalize() for w in words]
-        self._replace_current_word(''.join(capitalized_words))
+        self._replace_current_word("".join(capitalized_words))
 
     # TODO: Handle snake_case words
     # Right now it handles PascalCase words, quickly put together for an
@@ -53,14 +63,35 @@ class CobraPlugin(object):
     @pynvim.command("CaseToConstant", nargs="*")
     def convert_to_constant(self, args):
         current_word = self._current_word()
-        words = re.findall(r'[A-Z][a-z]+', current_word)
+        words = re.findall(r"[A-Z][a-z]+", current_word)
         constant_word = [w.upper() for w in words]
-        self._replace_current_word('_'.join(constant_word))
+        self._replace_current_word("_".join(constant_word))
+
+    @pynvim.command("CRSpec", nargs="*")
+    def convert_to_constant(self, args):
+        buffer_path = str(self._current_file_path_relative_to_git_root_directory())
+
+        # To Specify the target pane see here https://github.com/tmux/tmux/wiki/Advanced-Use#command-targets
+        # Use first pane of the second window as target, in the current session
+        tmux_target_pane, target_spec_file = utils.with_default_values(
+            args, [2.1, buffer_path]
+        )
+        tmux.run_command(f"bin/rspec {target_spec_file}", tmux_target_pane)
 
     def _current_word(self):
         self.nvim.command('normal! "wyiw')
-        return self.nvim.funcs.getreg('w')
+        return self.nvim.funcs.getreg("w")
 
     def _replace_current_word(self, new_word):
-        self.nvim.funcs.setreg('w', new_word)
+        self.nvim.funcs.setreg("w", new_word)
         return self.nvim.command('normal! viw"wp')
+
+    def _current_buffer(self):
+        return self.nvim.current.buffer.name
+
+    def _current_file_path_relative_to_git_root_directory(self):
+        current_buffer_path = Path(self._current_buffer())
+        logging.info(f"{current_buffer_path=}")
+        git_root_path = Path(git.get_root_directory().strip()).absolute()
+        logging.info(f"{git_root_path=}")
+        return current_buffer_path.relative_to(git_root_path)
