@@ -6,6 +6,7 @@ import git
 import tmux
 import utils
 
+from fzf import Fzf
 
 @pynvim.plugin
 class RailsPlugin:
@@ -64,4 +65,8 @@ class RailsPlugin:
             str(p.relative_to(git_root_path))
             for p in git_root_path.glob("spec/**/*_spec.rb")
         ]
-        return spec_files
+        fzf = Fzf()
+        filtered_files = fzf.filter(arg_lead, "\n".join(spec_files))
+        utils.logging.info(f"\n{filtered_files=}\n")
+        utils.logging.info(f"\n{arg_lead=}\n")
+        return filtered_files
