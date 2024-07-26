@@ -37,6 +37,7 @@ def with_default_values(arr, default_arr):
             arr.append(default_arr[len(arr)])
     return arr
 
+
 # Returns False if it is an empty list or checkes if `all` elements are True
 def not_empty_and_all_true(arr):
     return bool(arr) and all(arr)
