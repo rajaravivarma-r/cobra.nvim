@@ -34,13 +34,20 @@ class CobraPlugin:
         import pyperclip
 
         copy_relative_path = False
+        copy_line_number = False
         buffer_path = Path(self.nvim_helper.current_buffer())
         if any("rel" in a for a in args):
             copy_relative_path = True
 
+        if any("line" in a for a in args):
+            copy_line_number = True
+
         if copy_relative_path:
             current_path = Path(self.nvim.command_output("pwd"))
             buffer_path = buffer_path.relative_to(current_path)
+
+        if copy_line_number:
+            buffer_path = str(buffer_path) + f":{self.nvim_helper.current_cursor_row()}"
         pyperclip.copy(str(buffer_path))
 
     @pynvim.command("CaseToCamelCase", nargs="*")
@@ -70,4 +77,8 @@ class CobraPlugin:
 
     @pynvim.function("PwfArguments", sync=True)
     def pwf_arguments(self, *args):
-        return ["relative", "absolute"]
+        # args will be a tuple of list like this (['line', 'Pwf line', 8],)
+        # line - is the argument which is already entered
+        # Pwf line - is the entire command line
+        # 8 - is the position of the cursor
+        return ["relative", "absolute", "line"]
