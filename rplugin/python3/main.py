@@ -3,6 +3,7 @@ import re
 
 import pynvim
 
+from text import Text
 import tmux
 import utils
 
@@ -57,10 +58,8 @@ class CobraPlugin:
         Used to convert between JSON and Ruby naming conventions
         """
         current_word = self.nvim_helper.get_current_word()
-        words = current_word.split("_")
-        first_word = words.pop(0)
-        capitalized_words = [first_word] + [w.capitalize() for w in words]
-        self.nvim_helper.replace_current_word("".join(capitalized_words))
+        text = Text(current_word)
+        self.nvim_helper.replace_current_word(text.convert_to_camel_case())
 
     # TODO: Handle snake_case words
     # Right now it handles PascalCase words, quickly put together for an
@@ -71,9 +70,17 @@ class CobraPlugin:
         Converts 'HelloWorld' to HELLO_WORLD
         """
         current_word = self.nvim_helper.get_current_word()
-        words = re.findall(r"[A-Z][a-z]+", current_word)
-        constant_word = [w.upper() for w in words]
-        self.nvim_helper.replace_current_word("_".join(constant_word))
+        text = Text(current_word)
+        self.nvim_helper.replace_current_word(text.convert_to_constant_case())
+
+    @pynvim.command("CaseToSnakeCase", nargs="*")
+    def convert_to_snake_case(self, args):
+        """
+        Converts 'HelloWorld' or 'helloWorld' to hello_world
+        """
+        current_word = self.nvim_helper.get_current_word()
+        text = Text(current_word)
+        self.nvim_helper.replace_current_word(text.convert_to_snake_case())
 
     @pynvim.function("PwfArguments", sync=True)
     def pwf_arguments(self, *args):
