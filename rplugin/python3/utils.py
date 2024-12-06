@@ -15,8 +15,30 @@ logging.basicConfig(
 )
 
 
-class NvimHelper:
+class SimpleDelegator:
+    def __init__(self, obj):
+        self._wrapped_obj = obj
+
+    def __getattr__(self, attr):
+        if attr == "_wrapped_obj":
+            return self._wrapped_obj
+        return getattr(self._wrapped_obj, attr)
+
+    def __setattr__(self, attr, value):
+        if attr == "_wrapped_obj":
+            super().__setattr__(attr, value)
+        else:
+            setattr(self._wrapped_obj, attr, value)
+
+    def __delattr__(self, attr):
+        if attr == "_wrapped_obj":
+            raise AttributeError("Can't delete _wrapped_obj")
+        delattr(self._wrapped_obj, attr)
+
+
+class NvimHelper(SimpleDelegator):
     def __init__(self, nvim):
+        super().__init__(nvim)
         self.nvim = nvim
 
     def get_current_word(self):
@@ -27,11 +49,11 @@ class NvimHelper:
         self.nvim.funcs.setreg("w", new_word)
         return self.nvim.command('normal! viw"wp')
 
-    def current_buffer(self):
+    def current_buffer_name(self):
         return self.nvim.current.buffer.name
 
     def current_file_path_relative_to(self, parent_path: Path):
-        current_buffer_path = Path(self.current_buffer())
+        current_buffer_path = Path(self.current_buffer_name())
         logging.info(f"{current_buffer_path=}")
         logging.info(f"{parent_path=}")
         return current_buffer_path.relative_to(parent_path)
@@ -47,6 +69,18 @@ class NvimHelper:
 
     def exec_lua(self, lua_code, *args, **kwargs):
         return self.nvim.exec_lua(lua_code, *args, **kwargs)
+
+    def insert_after_cursor(self, text):
+        return self.nvim.feedkeys(f"a{text}")
+
+    def insert_at_cursor(self, text):
+        return self.nvim.feedkeys(f"i{text}")
+
+    def append_to_current_buffer(self, text):
+        return self.nvim.current.buffer.append(text)
+
+    def write_message(self, message):
+        return self.nvim.out_write(f"{message}\n")
 
 
 def with_default_values(arr, default_arr):

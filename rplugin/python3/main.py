@@ -36,7 +36,7 @@ class CobraPlugin:
 
         copy_relative_path = False
         copy_line_number = False
-        buffer_path = Path(self.nvim_helper.current_buffer())
+        buffer_path = Path(self.nvim_helper.current_buffer_name())
         if any("rel" in a for a in args):
             copy_relative_path = True
 
