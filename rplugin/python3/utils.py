@@ -10,8 +10,10 @@ import wat
 
 from contextlib import redirect_stdout, contextmanager
 
+log_file_path = Path.home().joinpath('vim.log')
+
 logging.basicConfig(
-    level=logging.DEBUG, filename="/Users/rajaravivarma/vim.log", filemode="w"
+    level=logging.DEBUG, filename=str(log_file_path), filemode="w"
 )
 
 
