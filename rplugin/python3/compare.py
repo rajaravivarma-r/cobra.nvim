@@ -47,6 +47,7 @@ def split_lines(nvim):
 
 def open_compare_results(nvim, title, lines):
     nvim.command("botright new")
+    nvim.command("wincmd J")
     buf = nvim.current.buffer
     buf.options["buftype"] = "nofile"
     buf.options["bufhidden"] = "wipe"
@@ -79,4 +80,3 @@ def only_present_on_right(nvim):
     left_set = set(left_lines)
     only_right = stable_unique([line for line in right_lines if line not in left_set])
     open_compare_results(nvim, "Only present on right", only_right)
-
