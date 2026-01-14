@@ -1,11 +1,11 @@
 from pathlib import Path
-import re
 
 import pynvim
 
 from text import Text
 import tmux
 import utils
+import compare
 
 
 @pynvim.plugin
@@ -13,69 +13,6 @@ class CobraPlugin:
     def __init__(self, nvim):
         self.nvim = nvim
         self.nvim_helper = utils.NvimHelper(nvim)
-
-    def _stable_unique(self, lines):
-        seen = set()
-        unique_lines = []
-        for line in lines:
-            if line in seen:
-                continue
-            seen.add(line)
-            unique_lines.append(line)
-        return unique_lines
-
-    def _left_right_windows(self):
-        windows = [
-            w
-            for w in self.nvim.current.tabpage.windows
-            if w.buffer.options.get("buftype", "") == ""
-        ]
-        if len(windows) < 2:
-            raise ValueError(
-                "Compare requires at least two file-backed windows in the current tabpage"
-            )
-
-        win_info = []
-        for window in windows:
-            info = self.nvim.funcs.getwininfo(window.handle)[0]
-            win_info.append(
-                (info.get("wincol", 0), info.get("winrow", 0), window)
-            )
-
-        min_col = min(col for col, _row, _w in win_info)
-        max_col = max(col for col, _row, _w in win_info)
-
-        if min_col == max_col:
-            win_info.sort(key=lambda x: (x[1], x[0]))
-            return win_info[0][2], win_info[-1][2]
-
-        left_win = min(
-            (t for t in win_info if t[0] == min_col), key=lambda x: x[1]
-        )[2]
-        right_win = min(
-            (t for t in win_info if t[0] == max_col), key=lambda x: x[1]
-        )[2]
-        return left_win, right_win
-
-    def _split_lines(self):
-        left_win, right_win = self._left_right_windows()
-        left_lines = list(left_win.buffer[:])
-        right_lines = list(right_win.buffer[:])
-        return left_lines, right_lines
-
-    def _open_compare_results(self, title, lines):
-        self.nvim.command("botright new")
-        buf = self.nvim.current.buffer
-        buf.options["buftype"] = "nofile"
-        buf.options["bufhidden"] = "wipe"
-        buf.options["swapfile"] = False
-        buf.options["buflisted"] = False
-        buf.options["modifiable"] = True
-        buf[:] = [title, ""] + (lines if lines else ["(none)"])
-        buf.options["modifiable"] = False
-        safe_title = re.sub(r"\s+", "_", title.strip()) or "results"
-        buf_name = f"[Compare]_{safe_title}"
-        self.nvim.command(f"file {self.nvim.funcs.fnameescape(buf_name)}")
 
     # Requires `pyperclip` to be installed in the python instance used by neovim
     # Copies the current buffer's filepath.
@@ -157,31 +94,19 @@ class CobraPlugin:
         """
         action = args[0]
         try:
-            left_lines, right_lines = self._split_lines()
+            if action == "show_common":
+                compare.show_common(self.nvim)
+                return
+
+            if action == "only_present_on_left":
+                compare.only_present_on_left(self.nvim)
+                return
+
+            if action == "only_present_on_right":
+                compare.only_present_on_right(self.nvim)
+                return
         except ValueError as e:
             return self.nvim.err_write(f"{e}\n")
-
-        left_set = set(left_lines)
-        right_set = set(right_lines)
-
-        if action == "show_common":
-            common = self._stable_unique([line for line in left_lines if line in right_set])
-            self._open_compare_results("Common lines", common)
-            return
-
-        if action == "only_present_on_left":
-            only_left = self._stable_unique(
-                [line for line in left_lines if line not in right_set]
-            )
-            self._open_compare_results("Only present on left", only_left)
-            return
-
-        if action == "only_present_on_right":
-            only_right = self._stable_unique(
-                [line for line in right_lines if line not in left_set]
-            )
-            self._open_compare_results("Only present on right", only_right)
-            return
 
         return self.nvim.err_write(
             "Compare: unknown action. Use one of: show_common, only_present_on_left, only_present_on_right\n"
